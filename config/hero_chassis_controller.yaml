@@ -1,0 +1,3 @@
+hero_chassis_controller:
+  wheel_base: 0.5  # 轴距
+  track_width: 0.4  # 轮距

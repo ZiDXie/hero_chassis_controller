@@ -30,8 +30,8 @@ find_package(catkin REQUIRED
 )
 
 ## Find system libraries
-find_package(Eigen3 REQUIRED)
-find_package(Boost REQUIRED)
+#find_package(Eigen3 REQUIRED)
+#find_package(Boost REQUIRED)
 
 ###################################
 ## catkin specific configuration ##

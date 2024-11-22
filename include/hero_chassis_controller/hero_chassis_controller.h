@@ -11,6 +11,7 @@
 #include "dynamic_reconfigure/server.h"
 #include "hero_chassis_controller/pidConfig.h"
 #include "ros/ros.h"
+#include "geometry_msgs/Twist.h"
 
 namespace hero_chassis_controller
 {

@@ -5,5 +5,6 @@
     <arg name="load_chassis" value="true"/>
     <arg name="roller_type" value="realistic"/>
   </include>
+  <rosparam file="$(find hero_chassis_controller)/config/hero_chassis_controller.yaml" command="load"/>
 
 </launch>
