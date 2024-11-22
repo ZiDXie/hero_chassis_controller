@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 project(hero_chassis_controller)
 
+if(POLICY CMP0148)
+    cmake_policy(SET CMP0148 OLD)
+endif()
+
 ## Use C++14
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -38,6 +42,11 @@ find_package(catkin REQUIRED
 ## LIBRARIES: libraries you create in this project that dependent projects also need
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
+generate_dynamic_reconfigure_options(
+        cfg/pid.cfg
+)
+
+
 catkin_package(
         INCLUDE_DIRS
         include
@@ -78,6 +87,7 @@ include_directories(
 #add_library(${PROJECT_NAME}
 #
 #)
+
 
 ## Declare cpp executables
 add_executable(${PROJECT_NAME}
