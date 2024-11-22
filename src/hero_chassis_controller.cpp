@@ -8,6 +8,7 @@
 
 namespace hero_chassis_controller
 {
+
 //回调函数实现
     void HeroChassisController::cb(hero_chassis_controller::pidConfig &config, uint32_t level){
       pid_front_left_.setGains(config.left_front_p, config.left_front_i, config.left_front_d, 100, 0);
@@ -20,6 +21,11 @@ namespace hero_chassis_controller
       ROS_INFO("Front Right: P=%.2f, I=%.2f, D=%.2f", config.right_front_p, config.right_front_i, config.right_front_d);
       ROS_INFO("Back Left: P=%.2f, I=%.2f, D=%.2f", config.left_back_p, config.left_back_i, config.left_back_d);
       ROS_INFO("Back Right: P=%.2f, I=%.2f, D=%.2f", config.right_back_p, config.right_back_i, config.right_back_d);
+    }
+    void HeroChassisController::cmdcb(const geometry_msgs::Twist::ConstPtr& msg){
+      vx = msg->linear.x;
+      vy = msg->linear.y;
+      wz = msg->angular.z;
     }
 
 //初始化函数实现
@@ -41,6 +47,12 @@ namespace hero_chassis_controller
       f = boost::bind(&HeroChassisController::cb, this, _1, _2);
       server.setCallback(f);
 
+      //在配置文件中读取参数
+      controller_nh.getParam("wheel_base", wheel_base);
+      controller_nh.getParam("track_width", track_width);
+
+      //cmd_sub订阅速度
+      cmd_sub = controller_nh.subscribe("cmd_vel", 10, &HeroChassisController::cmdcb, this);
 
       return true;
     }
