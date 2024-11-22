@@ -29,18 +29,18 @@ namespace hero_chassis_controller
     }
 
 //初始化函数实现
-    bool HeroChassisController::init(hardware_interface::VelocityJointInterface* effort_joint_interface, ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh){
+    bool HeroChassisController::init(hardware_interface::EffortJointInterface* effort_joint_interface, ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh){
       // 关节初始化
-      front_left_joint_ = effort_joint_interface->getHandle("front_left_wheel_joint");
-      front_right_joint_ = effort_joint_interface->getHandle("front_right_wheel_joint");
-      back_left_joint_ = effort_joint_interface->getHandle("back_left_wheel_joint");
-      back_right_joint_ = effort_joint_interface->getHandle("back_right_wheel_joint");
+      front_left_joint_ = effort_joint_interface->getHandle("left_front_wheel_joint");
+      front_right_joint_ = effort_joint_interface->getHandle("right_front_wheel_joint");
+      back_left_joint_ = effort_joint_interface->getHandle("left_back_wheel_joint");
+      back_right_joint_ = effort_joint_interface->getHandle("right_back_wheel_joint");
 
       //pid初始化
-      pid_front_left_.init(ros::NodeHandle(controller_nh, "front_left_wheel_joint"));
-      pid_front_right_.init(ros::NodeHandle(controller_nh, "front_right_wheel_joint"));
-      pid_back_left_.init(ros::NodeHandle(controller_nh, "back_left_wheel_joint"));
-      pid_back_right_.init(ros::NodeHandle(controller_nh, "back_right_wheel_joint"));
+      pid_front_left_.init(ros::NodeHandle(controller_nh, "left_front_wheel_joint"));
+      pid_front_right_.init(ros::NodeHandle(controller_nh, "right_front_wheel_joint"));
+      pid_back_left_.init(ros::NodeHandle(controller_nh, "left_back_wheel_joint"));
+      pid_back_right_.init(ros::NodeHandle(controller_nh, "right_back_wheel_joint"));
 
       //动态参数
       dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>::CallbackType f;

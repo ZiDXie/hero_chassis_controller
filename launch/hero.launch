@@ -5,11 +5,11 @@
     <arg name="load_chassis" value="true"/>
     <arg name="roller_type" value="realistic"/>
   </include>
-  <rosparam file="$(find hero_chassis_controller)/config/hero_chassis_controller.yaml" command="load"/>
+  <rosparam file="$(find hero_chassis_controller)/config/controllers.yaml" command="load"/>
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
         output="screen" args="
-        hero_chassis_controller/hero_chassis_controller
-        hero_chassis_controller/joint_state_controller
+        controller/hero_chassis_controller
+        controller/joint_state_controller
   "/>
 
 </launch>

@@ -1,7 +1,6 @@
-hero_chassis_controller:
+controller:
   wheel_base: 0.5  # 轴距
   track_width: 0.4  # 轮距
-
   hero_chassis_controller:
     type: hero_chassis_controller/HeroChassisController
   joint_state_controller:
