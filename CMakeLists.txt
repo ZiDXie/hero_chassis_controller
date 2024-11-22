@@ -30,8 +30,8 @@ find_package(catkin REQUIRED
 )
 
 ## Find system libraries
-#find_package(Eigen3 REQUIRED)
-#find_package(Boost REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(Boost REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -84,16 +84,16 @@ include_directories(
 )
 
 ## Declare a cpp library
-#add_library(${PROJECT_NAME}
-#
-#)
+add_library(${PROJECT_NAME}
+        src/hero_chassis_controller.cpp
+)
 
 
 ## Declare cpp executables
-add_executable(${PROJECT_NAME}
-        src/hero_chassis_controller.cpp
-
-)
+#add_executable(${PROJECT_NAME}
+#        src/hero_chassis_controller.cpp
+#
+#)
 add_dependencies(${PROJECT_NAME}
         ${catkin_EXPORTED_TARGETS}
 )

@@ -22,6 +22,8 @@
   <depend>message_generation</depend>
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
-
   <build_depend>roslint</build_depend>
+  <export>
+    <controller_interface plugin="${prefix}/hero_chassis_controller_plugins.xml"/>
+  </export>
 </package>
