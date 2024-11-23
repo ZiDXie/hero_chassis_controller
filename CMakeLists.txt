@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(hero_chassis_controller)
 
-if(POLICY CMP0148)
+if (POLICY CMP0148)
     cmake_policy(SET CMP0148 OLD)
-endif()
+endif ()
 
 ## Use C++14
 set(CMAKE_CXX_STANDARD 14)
@@ -62,6 +62,8 @@ catkin_package(
         control_toolbox
         dynamic_reconfigure
         std_msgs
+        tf2
+        tf2_ros
         DEPENDS
         ## find_package(Eigen3) provides a non standard EIGEN3_INCLUDE_DIR instead of Eigen3_INCLUDE_DIRS.
         ## Therefore, the DEPEND does not work as expected and we need to add the directory to the INCLUDE_DIRS

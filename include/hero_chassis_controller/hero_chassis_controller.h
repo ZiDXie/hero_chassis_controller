@@ -25,8 +25,6 @@ public:
   bool init(hardware_interface::EffortJointInterface* effort_joint_interface, ros::NodeHandle& root_nh,
             ros::NodeHandle& controller_nh) override;
   void update(const ros::Time& time, const ros::Duration& period) override;
-  // void starting(const ros::Time& time) override;
-  // void stopping(const ros::Time& time) override;
 
   // 关节和pid
   hardware_interface::JointHandle front_left_joint_, front_right_joint_, back_left_joint_, back_right_joint_;
@@ -41,6 +39,7 @@ public:
   void cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg);
 
   // 车的速度和参数
+  // 车的参数从urdf文件中读取
   double vx, vy, wz = 0.0;
   double wheel_base = 0.4;
   double wheel_track = 0.4;
