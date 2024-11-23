@@ -22,7 +22,7 @@ void HeroChassisController::cb(hero_chassis_controller::pidConfig& config, uint3
   ROS_INFO("Back Left: P=%.2f, I=%.2f, D=%.2f", config.left_back_p, config.left_back_i, config.left_back_d);
   ROS_INFO("Back Right: P=%.2f, I=%.2f, D=%.2f", config.right_back_p, config.right_back_i, config.right_back_d);
 }
-void HeroChassisController::cmdcb(const geometry_msgs::Twist::ConstPtr& msg)
+void HeroChassisController::cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg)
 {
   vx = msg->linear.x;
   vy = msg->linear.y;
@@ -49,11 +49,24 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
   server = std::make_shared<dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>>(controller_nh);
   server->setCallback(boost::bind(&HeroChassisController::cb, this, _1, _2));
   // 在配置文件中读取参数
-  controller_nh.getParam("wheel_base", wheel_base);
-  controller_nh.getParam("wheel_track", wheel_track);
-  controller_nh.getParam("wheel_radius", wheel_radius);
+  // if (!controller_nh.getParam("wheel_base", wheel_base) || wheel_base <= 0)
+  // {
+  //   ROS_ERROR("Invalid or missing parameter: wheel_base");
+  //   return false;
+  // }
+  // if (!controller_nh.getParam("wheel_track", wheel_track) || wheel_track <= 0)
+  // {
+  //   ROS_ERROR("Invalid or missing parameter: wheel_track");
+  //   return false;
+  // }
+  // if (!controller_nh.getParam("wheel_radius", wheel_radius) || wheel_radius <= 0)
+  // {
+  //   ROS_ERROR("Invalid or missing parameter: wheel_radius");
+  //   return false;
+  // }
+
   // cmd_sub订阅速度
-  cmd_sub = root_nh.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &HeroChassisController::cmdcb, this);
+  cmd_sub = root_nh.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &HeroChassisController::cmdvel_cb, this);
 
   return true;
 }
@@ -75,17 +88,27 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   double bl_actual = back_left_joint_.getVelocity();
   double br_actual = back_right_joint_.getVelocity();
 
+  ROS_INFO_STREAM("Front Left: " << fl_exp - fl_actual << ", " << fl_exp << ", " << fl_actual);
+  ROS_INFO_STREAM("Front Right: " << fr_exp - fr_actual << ", " << fr_exp << ", " << fr_actual);
+  ROS_INFO_STREAM("Back Left: " << bl_exp - bl_actual << ", " << bl_exp << ", " << bl_actual);
+  ROS_INFO_STREAM("Back Right: " << br_exp - br_actual << ", " << br_exp << ", " << br_actual);
+
   // 计算
   double fl_effort = pid_front_left_.computeCommand(fl_exp - fl_actual, period);
   double fr_effort = pid_front_right_.computeCommand(fr_exp - fr_actual, period);
   double bl_effort = pid_back_left_.computeCommand(bl_exp - bl_actual, period);
   double br_effort = pid_back_right_.computeCommand(br_exp - br_actual, period);
 
+  ROS_INFO_STREAM("Front Left: " << fl_effort << ", " << fl_exp << ", " << fl_actual);
+  ROS_INFO_STREAM("Front Right: " << fr_effort << ", " << fr_exp << ", " << fr_actual);
+  ROS_INFO_STREAM("Back Left: " << bl_effort << ", " << bl_exp << ", " << bl_actual);
+  ROS_INFO_STREAM("Back Right: " << br_effort << ", " << br_exp << ", " << br_actual);
   // 输出
   front_left_joint_.setCommand(fl_effort);
   front_right_joint_.setCommand(fr_effort);
   back_left_joint_.setCommand(bl_effort);
   back_right_joint_.setCommand(br_effort);
+
     }
 
 PLUGINLIB_EXPORT_CLASS(hero_chassis_controller::HeroChassisController, controller_interface::ControllerBase)

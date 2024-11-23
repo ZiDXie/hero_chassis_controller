@@ -38,13 +38,13 @@ public:
 
   // 订阅速度
   ros::Subscriber cmd_sub;
-  void cmdcb(const geometry_msgs::Twist::ConstPtr& msg);
+  void cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg);
 
   // 车的速度和参数
-  double vx, vy, wz;
-  double wheel_base;
-  double wheel_track;
-  double wheel_radius;
+  double vx, vy, wz = 0.0;
+  double wheel_base = 0.4;
+  double wheel_track = 0.4;
+  double wheel_radius = 0.07625;
 
   // 发布里程计
   std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> odom_pub;
