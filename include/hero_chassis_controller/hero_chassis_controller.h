@@ -59,7 +59,7 @@ public:
   // 实际的速度
   double vx_real = 0.0;
   double vy_real = 0.0;
-  double th_real = 0.0;
+  double wz_real = 0.0;
 
   };
 }

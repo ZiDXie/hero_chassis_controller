@@ -109,6 +109,25 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   back_left_joint_.setCommand(bl_effort);
   back_right_joint_.setCommand(br_effort);
 
+  // odom里程计
+  double dt = (time - last_time).toSec();
+  last_time = time;
+  // 计算实际速度,根据论文中的公式计算
+  // vx_real 是机器人在自身坐标系中的 x 方向速度。
+  // vy_real 是机器人在自身坐标系中的 y 方向速度。
+  vx_real = (fl_actual + fr_actual + bl_actual + br_actual) * wheel_radius / 4;
+  vy_real = (-fl_actual + fr_actual + bl_actual - br_actual) * wheel_radius / 4;
+  wz_real = (-fl_actual - fr_actual + bl_actual + br_actual) * wheel_radius / (4 * (lx + ly));
+  // 在机器人速度的情况下，以典型方式计算里程计,换算成odom
+  double dx = (vx_real*cos(th) - vy_real*sin(th)) * dt;
+  double dy = (vx_real*sin(th) + vy_real*cos(th)) * dt;
+  double dth = wz_real * dt;
+  //速度叠加
+  x += dx;
+  y += dy;
+  th += dth;
+
+
     }
 
 PLUGINLIB_EXPORT_CLASS(hero_chassis_controller::HeroChassisController, controller_interface::ControllerBase)
