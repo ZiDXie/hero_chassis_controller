@@ -13,4 +13,6 @@
         controller/joint_state_controller
   "/>
 
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find hero_chassis_controller)/config/hero.rviz"/>
+
 </launch>

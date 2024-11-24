@@ -69,8 +69,9 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
   cmd_sub = root_nh.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &HeroChassisController::cmdvel_cb, this);
 
   // 发布里程计
-  odom_pub = std::make_shared<realtime_tools::RealtimePublisher<nav_msgs::Odometry>>(root_nh, "odom", 50);
+  odom_pub = root_nh.advertise<nav_msgs::Odometry>("odom", 10);
   last_time = ros::Time::now();
+
   return true;
 }
 
@@ -117,16 +118,49 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   // vy_real 是机器人在自身坐标系中的 y 方向速度。
   vx_real = (fl_actual + fr_actual + bl_actual + br_actual) * wheel_radius / 4;
   vy_real = (-fl_actual + fr_actual + bl_actual - br_actual) * wheel_radius / 4;
-  wz_real = (-fl_actual - fr_actual + bl_actual + br_actual) * wheel_radius / (4 * (lx + ly));
+  vth_real = (-fl_actual - fr_actual + bl_actual + br_actual) * wheel_radius / (4 * (lx + ly));
   // 在机器人速度的情况下，以典型方式计算里程计,换算成odom
-  double dx = (vx_real*cos(th) - vy_real*sin(th)) * dt;
-  double dy = (vx_real*sin(th) + vy_real*cos(th)) * dt;
-  double dth = wz_real * dt;
-  //速度叠加
+  double dx = (vx_real * cos(th) - vy_real * sin(th)) * dt;
+  double dy = (vx_real * sin(th) + vy_real * cos(th)) * dt;
+  double dth = vth_real * dt;
+  // 速度叠加
   x += dx;
   y += dy;
   th += dth;
 
+  // 从 yaw 创建一个四元数
+  tf2::Quaternion q;
+  q.setRPY(0, 0, th);
+  geometry_msgs::Quaternion odom_quat = tf2::toMsg(q);
+  // 发布tf变换
+  geometry_msgs::TransformStamped odom_trans;
+  odom_trans.header.stamp = time;
+  odom_trans.header.frame_id = "odom";
+  odom_trans.child_frame_id = "base_link";
+
+  odom_trans.transform.translation.x = x;
+  odom_trans.transform.translation.y = y;
+  odom_trans.transform.translation.z = 0.0;
+  odom_trans.transform.rotation = odom_quat;
+
+  odom_broadcaster.sendTransform(odom_trans);
+
+  // 发布odom
+  nav_msgs::Odometry odom;
+  odom.header.stamp = time;
+  odom.header.frame_id = "odom";
+
+  odom.pose.pose.position.x = x;
+  odom.pose.pose.position.y = y;
+  odom.pose.pose.position.z = 0.0;
+  odom.pose.pose.orientation = odom_quat;
+
+  odom.child_frame_id = "base_link";
+  odom.twist.twist.linear.x = vx_real;
+  odom.twist.twist.linear.y = vy_real;
+  odom.twist.twist.angular.z = vth_real;
+
+  odom_pub.publish(odom);
 
     }
 

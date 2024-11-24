@@ -16,6 +16,9 @@
 #include "tf2_ros/transform_broadcaster.h"
 #include "geometry_msgs/TransformStamped.h"
 #include "realtime_tools/realtime_publisher.h"
+#include "tf/tf.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2/LinearMath/Quaternion.h"
 
 namespace hero_chassis_controller
 {
@@ -49,7 +52,7 @@ public:
   double wheel_radius = 0.07625;
 
   // 发布里程计
-  std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> odom_pub;
+  ros::Publisher odom_pub;
   tf2_ros::TransformBroadcaster odom_broadcaster;
   ros::Time last_time;
   // 机器人最初从 “odom” 坐标系的原点开始。
@@ -59,7 +62,7 @@ public:
   // 实际的速度
   double vx_real = 0.0;
   double vy_real = 0.0;
-  double wz_real = 0.0;
+  double vth_real = 0.0;
 
   };
 }
