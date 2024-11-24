@@ -13,6 +13,9 @@
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
 #include "nav_msgs/Odometry.h"
+#include "tf2_ros/transform_broadcaster.h"
+#include "geometry_msgs/TransformStamped.h"
+#include "realtime_tools/realtime_publisher.h"
 
 namespace hero_chassis_controller
 {
@@ -38,7 +41,7 @@ public:
   ros::Subscriber cmd_sub;
   void cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg);
 
-  // 车的速度和参数
+  // 车的目标速度和参数
   // 车的参数从urdf文件中读取
   double vx, vy, wz = 0.0;
   double wheel_base = 0.4;
@@ -47,6 +50,17 @@ public:
 
   // 发布里程计
   std::shared_ptr<realtime_tools::RealtimePublisher<nav_msgs::Odometry>> odom_pub;
+  tf2_ros::TransformBroadcaster odom_broadcaster;
+  ros::Time last_time;
+  // 机器人最初从 “odom” 坐标系的原点开始。
+  double x = 0.0;
+  double y = 0.0;
+  double th = 0.0;
+  // 实际的速度
+  double vx_real = 0.0;
+  double vy_real = 0.0;
+  double th_real = 0.0;
+
   };
 }
 

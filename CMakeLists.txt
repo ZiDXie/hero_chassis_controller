@@ -26,7 +26,12 @@ find_package(catkin REQUIRED
         pluginlib
         message_generation
         std_msgs
-
+        realtime_tools
+        nav_msgs
+        tf2_ros
+        geometry_msgs
+        tf2_geometry_msgs
+        tf2
 )
 
 ## Find system libraries
@@ -62,8 +67,12 @@ catkin_package(
         control_toolbox
         dynamic_reconfigure
         std_msgs
-        tf2
         tf2_ros
+        realtime_tools
+        nav_msgs
+        geometry_msgs
+        tf2_geometry_msgs
+        tf2
         DEPENDS
         ## find_package(Eigen3) provides a non standard EIGEN3_INCLUDE_DIR instead of Eigen3_INCLUDE_DIRS.
         ## Therefore, the DEPEND does not work as expected and we need to add the directory to the INCLUDE_DIRS

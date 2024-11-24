@@ -68,6 +68,9 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
   // cmd_sub订阅速度
   cmd_sub = root_nh.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &HeroChassisController::cmdvel_cb, this);
 
+  // 发布里程计
+  odom_pub = std::make_shared<realtime_tools::RealtimePublisher<nav_msgs::Odometry>>(root_nh, "odom", 50);
+  last_time = ros::Time::now();
   return true;
 }
 
@@ -88,21 +91,17 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   double bl_actual = back_left_joint_.getVelocity();
   double br_actual = back_right_joint_.getVelocity();
 
-  ROS_INFO_STREAM("Front Left: " << fl_exp - fl_actual << ", " << fl_exp << ", " << fl_actual);
-  ROS_INFO_STREAM("Front Right: " << fr_exp - fr_actual << ", " << fr_exp << ", " << fr_actual);
-  ROS_INFO_STREAM("Back Left: " << bl_exp - bl_actual << ", " << bl_exp << ", " << bl_actual);
-  ROS_INFO_STREAM("Back Right: " << br_exp - br_actual << ", " << br_exp << ", " << br_actual);
-
   // 计算
   double fl_effort = pid_front_left_.computeCommand(fl_exp - fl_actual, period);
   double fr_effort = pid_front_right_.computeCommand(fr_exp - fr_actual, period);
   double bl_effort = pid_back_left_.computeCommand(bl_exp - bl_actual, period);
   double br_effort = pid_back_right_.computeCommand(br_exp - br_actual, period);
 
-  ROS_INFO_STREAM("Front Left: " << fl_effort << ", " << fl_exp << ", " << fl_actual);
-  ROS_INFO_STREAM("Front Right: " << fr_effort << ", " << fr_exp << ", " << fr_actual);
-  ROS_INFO_STREAM("Back Left: " << bl_effort << ", " << bl_exp << ", " << bl_actual);
-  ROS_INFO_STREAM("Back Right: " << br_effort << ", " << br_exp << ", " << br_actual);
+  // 调试信息
+  //  ROS_INFO_STREAM("Front Left: " << fl_effort << ", " << fl_exp << ", " << fl_actual);
+  //  ROS_INFO_STREAM("Front Right: " << fr_effort << ", " << fr_exp << ", " << fr_actual);
+  //  ROS_INFO_STREAM("Back Left: " << bl_effort << ", " << bl_exp << ", " << bl_actual);
+  //  ROS_INFO_STREAM("Back Right: " << br_effort << ", " << br_exp << ", " << br_actual);
 
   // 输出
   front_left_joint_.setCommand(fl_effort);
