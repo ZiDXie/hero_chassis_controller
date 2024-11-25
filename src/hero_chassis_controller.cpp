@@ -24,9 +24,34 @@ void HeroChassisController::cb(hero_chassis_controller::pidConfig& config, uint3
 }
 void HeroChassisController::cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg)
 {
-  vx = msg->linear.x;
-  vy = msg->linear.y;
-  wz = msg->angular.z;
+  if (!chassis_mode)
+  {
+    // 全局信息设置
+    global.header.frame_id = "odom";
+    global.header.stamp = ros::Time(0);
+    global.vector.x = msg->linear.x;
+    global.vector.y = msg->linear.y;
+    global.vector.z = 0.0;
+
+    // 转换到底盘坐标系
+    try
+    {
+      tf_listener.transformVector("base_link", global, chassis);
+      vx = chassis.vector.x;
+      vy = chassis.vector.y;
+      wz = msg->angular.z;
+    }
+    catch (tf::TransformException& ex)
+    {
+      ROS_ERROR("Received an exception trying to transform a point from \"odom\" to \"base_link\": %s", ex.what());
+    }
+  }
+  else
+  {
+    vx = msg->linear.x;
+    vy = msg->linear.y;
+    wz = msg->angular.z;
+  }
 }
 
 // 初始化函数实现
@@ -116,7 +141,7 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   // vy_real 是机器人在自身坐标系中的 y 方向速度。
   vx_real = (fl_actual + fr_actual + bl_actual + br_actual) * wheel_radius / 4;
   vy_real = (-fl_actual + fr_actual + bl_actual - br_actual) * wheel_radius / 4;
-  vth_real = (-fl_actual - fr_actual + bl_actual + br_actual) * wheel_radius / (4 * (lx + ly));
+  vth_real = (-fl_actual + fr_actual - bl_actual + br_actual) * wheel_radius / (4 * (lx + ly));
   // 在机器人速度的情况下，以典型方式计算里程计,换算成odom
   double dx = (vx_real * cos(th) - vy_real * sin(th)) * dt;
   double dy = (vx_real * sin(th) + vy_real * cos(th)) * dt;
@@ -125,7 +150,6 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   x += dx;
   y += dy;
   th += dth;
-
   // 从 yaw 创建一个四元数
   tf2::Quaternion q;
   q.setRPY(0, 0, th);

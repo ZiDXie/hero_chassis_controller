@@ -15,6 +15,8 @@
 #include "geometry_msgs/Vector3Stamped.h"
 #include "geometry_msgs/TransformStamped.h"
 #include "nav_msgs/Odometry.h"
+#include "tf/tf.h"
+#include "tf/transform_listener.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2/LinearMath/Quaternion.h"
@@ -66,9 +68,8 @@ public:
   double vth_real = 0.0;
 
   // 模式切换
-  bool chassis_mode = true;
-  tf2_ros::Buffer tf_buffer;
-  tf2_ros::TransformListener tf_listener{ tf_buffer };
+  bool chassis_mode = false;
+  tf::TransformListener tf_listener;
   // 源坐标系
   geometry_msgs::Vector3Stamped global;
   //目标坐标系
