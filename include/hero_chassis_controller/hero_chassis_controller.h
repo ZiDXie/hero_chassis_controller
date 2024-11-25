@@ -12,13 +12,15 @@
 #include "hero_chassis_controller/pidConfig.h"
 #include "ros/ros.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Vector3Stamped.h"
+#include "geometry_msgs/TransformStamped.h"
 #include "nav_msgs/Odometry.h"
 #include "tf2_ros/transform_broadcaster.h"
-#include "geometry_msgs/TransformStamped.h"
-#include "realtime_tools/realtime_publisher.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_listener.h"
+
+#include "realtime_tools/realtime_publisher.h"
 
 namespace hero_chassis_controller
 {
@@ -54,7 +56,6 @@ public:
   // 发布里程计
   ros::Publisher odom_pub;
   tf2_ros::TransformBroadcaster odom_broadcaster;
-  ros::Time last_time;
   // 机器人最初从 “odom” 坐标系的原点开始。
   double x = 0.0;
   double y = 0.0;
@@ -63,6 +64,16 @@ public:
   double vx_real = 0.0;
   double vy_real = 0.0;
   double vth_real = 0.0;
+
+  // 模式切换
+  bool chassis_mode = true;
+  tf2_ros::Buffer tf_buffer;
+  tf2_ros::TransformListener tf_listener{ tf_buffer };
+  // 源坐标系
+  geometry_msgs::Vector3Stamped global;
+  //目标坐标系
+  geometry_msgs::Vector3Stamped chassis;
+
 
   };
 }

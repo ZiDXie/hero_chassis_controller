@@ -70,7 +70,6 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
 
   // 发布里程计
   odom_pub = root_nh.advertise<nav_msgs::Odometry>("odom", 10);
-  last_time = ros::Time::now();
 
   return true;
 }
@@ -111,8 +110,7 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   back_right_joint_.setCommand(br_effort);
 
   // odom里程计
-  double dt = (time - last_time).toSec();
-  last_time = time;
+  double dt = period.toSec();
   // 计算实际速度,根据论文中的公式计算
   // vx_real 是机器人在自身坐标系中的 x 方向速度。
   // vy_real 是机器人在自身坐标系中的 y 方向速度。
@@ -161,6 +159,8 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   odom.twist.twist.angular.z = vth_real;
 
   odom_pub.publish(odom);
+
+
 
     }
 
