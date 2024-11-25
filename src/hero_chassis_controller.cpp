@@ -34,17 +34,10 @@ void HeroChassisController::cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg)
     global.vector.z = 0.0;
 
     // 转换到底盘坐标系
-    try
-    {
-      tf_listener.transformVector("base_link", global, chassis);
-      vx = chassis.vector.x;
-      vy = chassis.vector.y;
-      wz = msg->angular.z;
-    }
-    catch (tf::TransformException& ex)
-    {
-      ROS_ERROR("Received an exception trying to transform a point from \"odom\" to \"base_link\": %s", ex.what());
-    }
+    tf_listener.transformVector("base_link", global, chassis);
+    vx = chassis.vector.x;
+    vy = chassis.vector.y;
+    wz = msg->angular.z;
   }
   else
   {
