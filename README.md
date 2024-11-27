@@ -19,16 +19,6 @@ The PACKAGE NAME package has been tested under [ROS] Indigo, Melodic and Noetic 
 
 ## Installation
 
-### Installation from Packages
-
-To install all packages from the this repository as Debian packages use
-
-    sudo apt-get install ros-noetic-...
-
-Or better, use `rosdep`:
-
-	sudo rosdep install --from-paths src
-
 ### Building from Source
 
 #### Dependencies
