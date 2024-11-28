@@ -1,7 +1,6 @@
 controller:
   wheel_base: 0.4  # 轴距
   wheel_track: 0.4  # 轮距
-  wheel_radius: 0.07625  # 轮子半径
   hero_chassis_controller:
     type: hero_chassis_controller/HeroChassisController
   joint_state_controller:

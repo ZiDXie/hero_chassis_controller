@@ -26,57 +26,87 @@
 
 namespace hero_chassis_controller
 {
+/*!
+ * Main class for the node to handle the ROS interfacing.
+ */
 class HeroChassisController : public controller_interface::Controller<hardware_interface::EffortJointInterface>
 {
 public:
+  /*!
+   * Constructor.
+   */
   HeroChassisController() = default;
+
+  /*!
+   * Destructor.
+   */
   ~HeroChassisController() override = default;
 
+private:
+  /*!
+   * init the ROS parameters.
+   * @return true if successful.
+   */
   bool init(hardware_interface::EffortJointInterface* effort_joint_interface, ros::NodeHandle& root_nh,
             ros::NodeHandle& controller_nh) override;
+  /*!
+   * update the ROS status
+   */
   void update(const ros::Time& time, const ros::Duration& period) override;
 
-  // 关节和pid
+  /*!
+   * ROS topic callback method.
+   */
+  void cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg);
+
+  /*!
+   * ROS service server callback.
+   */
+  void cb(hero_chassis_controller::pidConfig& config, uint32_t level);
+
+  //! ROS service server.
+  std::shared_ptr<dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>> server;
+
+  //! ROS topic subscriber.
+  // Subscription speed
+  ros::Subscriber cmd_sub;
+
+  // Joints and PID
   hardware_interface::JointHandle front_left_joint_, front_right_joint_, back_left_joint_, back_right_joint_;
   control_toolbox::Pid pid_front_left_, pid_front_right_, pid_back_left_, pid_back_right_;
 
-  // 动态参数
-  void cb(hero_chassis_controller::pidConfig& config, uint32_t level);
-  std::shared_ptr<dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>> server;
-
-  // 订阅速度
-  ros::Subscriber cmd_sub;
-  void cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg);
-
-  // 车的目标速度和参数
-  // 车的参数从urdf文件中读取
+  // Target speed and parameters of the car
+  // The parameters of the car are in the URDF
   double vx, vy, wz = 0.0;
   double wheel_base = 0.4;
   double wheel_track = 0.4;
   double wheel_radius = 0.07625;
 
-  // 发布里程计
+  // Publish the odom
   ros::Publisher odom_pub;
   tf2_ros::TransformBroadcaster odom_broadcaster;
-  // 机器人最初从 “odom” 坐标系的原点开始。
+
+  // The robot initially starts from the origin of the "odom" coordinate system.
   double x = 0.0;
   double y = 0.0;
   double th = 0.0;
-  // 实际的速度
+
+  // Actual speed
   double vx_real = 0.0;
   double vy_real = 0.0;
   double vth_real = 0.0;
 
-  // 模式切换
-  bool chassis_mode = false;
+  // Mode Switching
+  bool chassis_mode;
   tf::TransformListener tf_listener;
-  // 源坐标系
+
+  // Source coordinate system
   geometry_msgs::Vector3Stamped global;
-  //目标坐标系
+
+  // Target coordinate system
   geometry_msgs::Vector3Stamped chassis;
+};
 
+}  // namespace hero_chassis_controller
 
-  };
-}
-
-#endif //HERO_CHASSIS_CONTROLLER_H
+#endif  // HERO_CHASSIS_CONTROLLER_H

@@ -91,8 +91,7 @@ Control the hero chassis.
 
 * **`wheel_base`** (double, default: 0.4)
 * **`wheel_track`**(double, default: 0.4)
-* **`wheel_radius`** (double, default: 0.07625)
-* **`chassis_mode`**(bool,default:true)
+* **`chassis_mode`**(bool, default: true)
 * **`p`** (double, default: 1.0)
 * **`i`** (double, default: 0.0)
 * **`d`** (double, default: 0.0)
