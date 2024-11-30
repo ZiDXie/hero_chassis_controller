@@ -21,6 +21,7 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_listener.h"
+#include "rm_msgs/ChassisCmd.h"
 
 #include "realtime_tools/realtime_publisher.h"
 
@@ -65,7 +66,7 @@ private:
   void cb(hero_chassis_controller::pidConfig& config, uint32_t level);
 
   //! ROS service server.
-  std::shared_ptr<dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>> server;
+  std::shared_ptr<dynamic_reconfigure::Server<pidConfig>> server;
 
   //! ROS topic subscriber.
   // Subscription speed
@@ -78,8 +79,8 @@ private:
   // Target speed and parameters of the car
   // The parameters of the car are in the URDF
   double vx, vy, wz = 0.0;
-  double wheel_base = 0.4;
-  double wheel_track = 0.4;
+  double wheel_base;
+  double wheel_track;
   double wheel_radius = 0.07625;
 
   // Publish the odom
@@ -105,6 +106,11 @@ private:
 
   // Target coordinate system
   geometry_msgs::Vector3Stamped chassis;
+
+  // Power limit
+  double power_limit;
+  double effort_coeff;
+  double vel_coeff;
 };
 
 }  // namespace hero_chassis_controller

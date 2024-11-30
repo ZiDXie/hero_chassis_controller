@@ -1,6 +1,11 @@
 controller:
   wheel_base: 0.4  # 轴距
   wheel_track: 0.4  # 轮距
+  chassis_mode: true
+  power:
+    effort_coeff: 10.0
+    vel_coeff: 0.0060
+    power_limit: 100
   hero_chassis_controller:
     type: hero_chassis_controller/HeroChassisController
   joint_state_controller:

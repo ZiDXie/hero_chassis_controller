@@ -11,11 +11,10 @@ namespace hero_chassis_controller
 // Callback function implementation
 void HeroChassisController::cb(hero_chassis_controller::pidConfig& config, uint32_t level)
 {
-  pid_front_left_.setGains(config.left_front_p, config.left_front_i, config.left_front_d, 100, 0);
-  pid_front_right_.setGains(config.right_front_p, config.right_front_i, config.right_front_d, 100, 0);
-  pid_back_left_.setGains(config.left_back_p, config.left_back_i, config.left_back_d, 100, 0);
-
-  pid_back_right_.setGains(config.right_back_p, config.right_back_i, config.right_back_d, 100, 0);
+  pid_front_left_.setGains(config.left_front_p, config.left_front_i, config.left_front_d, 1, -1);
+  pid_front_right_.setGains(config.right_front_p, config.right_front_i, config.right_front_d, 1, -1);
+  pid_back_left_.setGains(config.left_back_p, config.left_back_i, config.left_back_d, 1, -1);
+  pid_back_right_.setGains(config.right_back_p, config.right_back_i, config.right_back_d, 1, -1);
 
   chassis_mode = config.chassis_mode;
 
@@ -63,14 +62,23 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
   back_right_joint_ = effort_joint_interface->getHandle("right_back_wheel_joint");
 
   // pid initialization
-  pid_front_left_.initPid(0, 0.0, 0.0, 100, 0.0);
-  pid_front_right_.initPid(0, 0.0, 0.0, 100, 0.0);
-  pid_back_left_.initPid(0, 0.0, 0.0, 100, 0.0);
-  pid_back_right_.initPid(0, 0.0, 0.0, 100, 0.0);
+  pid_front_left_.initPid(0, 0.0, 0.0, 1, -1);
+  pid_front_right_.initPid(0, 0.0, 0.0, 1, -1);
+  pid_back_left_.initPid(0, 0.0, 0.0, 1, -1);
+  pid_back_right_.initPid(0, 0.0, 0.0, 1, -1);
+
+  // Read parameters from configuration file
+  controller_nh.param("chassis_mode", chassis_mode, true);
+  controller_nh.param("wheel_base", wheel_base, 0.4);
+  controller_nh.param("wheel_track", wheel_track, 0.4);
+  controller_nh.param("power/power_limit", power_limit, 100.0);
+  controller_nh.param("power/effort_coeff", effort_coeff, 10.0);
+  controller_nh.param("power/vel_coeff", vel_coeff, 0.0060);
 
   // Dynamic parameters
   server = std::make_shared<dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>>(controller_nh);
-  server->setCallback(boost::bind(&HeroChassisController::cb, this, _1, _2));
+  server->setCallback(
+      [this](auto&& PH1, auto&& PH2) { cb(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
 
   // cmd_sub subscription speed
   cmd_sub = root_nh.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &HeroChassisController::cmdvel_cb, this);
@@ -104,11 +112,26 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   double bl_effort = pid_back_left_.computeCommand(bl_exp - bl_actual, period);
   double br_effort = pid_back_right_.computeCommand(br_exp - br_actual, period);
 
-  // 调试信息
-  //  ROS_INFO_STREAM("Front Left: " << fl_effort << ", " << fl_exp << ", " << fl_actual);
-  //  ROS_INFO_STREAM("Front Right: " << fr_effort << ", " << fr_exp << ", " << fr_actual);
-  //  ROS_INFO_STREAM("Back Left: " << bl_effort << ", " << bl_exp << ", " << bl_actual);
-  //  ROS_INFO_STREAM("Back Right: " << br_effort << ", " << br_exp << ", " << br_actual);
+  // Power limit algorithm
+  double P_out = (abs(fl_effort * fl_actual) + abs(fr_effort * fr_actual) + abs(bl_effort * bl_actual) +
+                  abs(br_effort * br_actual));
+  double P_in = P_out + effort_coeff * (pow(fl_effort, 2) + pow(fr_effort, 2) + pow(bl_effort, 2) + pow(br_effort, 2)) +
+                vel_coeff * (pow(fl_actual, 2) + pow(fr_actual, 2) + pow(bl_actual, 2) + pow(br_actual, 2));
+  if (P_in > power_limit)
+  {
+    double k =
+        ((-P_out) +
+         sqrt(pow(fl_effort * fl_actual, 2) + pow(fr_effort * fr_actual, 2) + pow(bl_effort * bl_actual, 2) +
+              pow(br_effort * br_actual, 2) -
+              4 * effort_coeff * (pow(fl_effort, 2) + pow(fr_effort, 2) + pow(bl_effort, 2) + pow(br_effort, 2)) *
+                  (vel_coeff * (pow(fl_actual, 2) + pow(fr_actual, 2) + pow(bl_actual, 2) + pow(br_actual, 2)) -
+                   power_limit))) /
+        2 * effort_coeff * (pow(fl_effort, 2) + pow(fr_effort, 2) + pow(bl_effort, 2) + pow(br_effort, 2));
+    fl_effort = fl_effort * k;
+    fr_effort = fr_effort * k;
+    bl_effort = bl_effort * k;
+    br_effort = br_effort * k;
+  }
 
   // Output
   front_left_joint_.setCommand(fl_effort);
@@ -138,7 +161,7 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   // Create a quaternion from yaw
   tf2::Quaternion q;
   q.setRPY(0, 0, th);
-  geometry_msgs::Quaternion odom_quat = tf2::toMsg(q);
+  geometry_msgs::Quaternion odom_quat = toMsg(q);
 
   // Publish tf transform
   geometry_msgs::TransformStamped odom_trans;

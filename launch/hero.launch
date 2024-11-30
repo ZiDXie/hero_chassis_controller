@@ -7,6 +7,8 @@
         <arg name="roller_type" value="realistic"/>
     </include>
 
+    <!--    启动一个控制器生成器节点，用于管理和生成机器人控制器。-->
+    <!--    加载并启动两个控制器：hero_chassis_controller和joint_state_controller-->
     <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
           output="screen" args="
         controller/hero_chassis_controller
