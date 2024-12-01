@@ -7,6 +7,11 @@
 
 namespace hero_chassis_controller
 {
+// Square function
+double HeroChassisController::square(double x)
+{
+  return x * x;
+}
 
 // Callback function implementation
 void HeroChassisController::cb(hero_chassis_controller::pidConfig& config, uint32_t level)
@@ -71,7 +76,7 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
   controller_nh.param("chassis_mode", chassis_mode, true);
   controller_nh.param("wheel_base", wheel_base, 0.4);
   controller_nh.param("wheel_track", wheel_track, 0.4);
-  controller_nh.param("power/power_limit", power_limit, 100.0);
+  controller_nh.param("power/power_limit", power_limit, 10.0);
   controller_nh.param("power/effort_coeff", effort_coeff, 10.0);
   controller_nh.param("power/vel_coeff", vel_coeff, 0.0060);
 
@@ -100,7 +105,7 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   double bl_exp = (vx + vy - (lx + ly) * wz) / wheel_radius;
   double br_exp = (vx - vy + (lx + ly) * wz) / wheel_radius;
 
-  // Actual speed
+  // Actual vel
   double fl_actual = front_left_joint_.getVelocity();
   double fr_actual = front_right_joint_.getVelocity();
   double bl_actual = back_left_joint_.getVelocity();
@@ -113,24 +118,18 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   double br_effort = pid_back_right_.computeCommand(br_exp - br_actual, period);
 
   // Power limit algorithm
-  double P_out = (abs(fl_effort * fl_actual) + abs(fr_effort * fr_actual) + abs(bl_effort * bl_actual) +
-                  abs(br_effort * br_actual));
-  double P_in = P_out + effort_coeff * (pow(fl_effort, 2) + pow(fr_effort, 2) + pow(bl_effort, 2) + pow(br_effort, 2)) +
-                vel_coeff * (pow(fl_actual, 2) + pow(fr_actual, 2) + pow(bl_actual, 2) + pow(br_actual, 2));
-  if (P_in > power_limit)
+  double a = effort_coeff * (square(fl_effort) + square(fr_effort) + square(bl_effort) + square(br_effort));
+  double b = std::abs(fl_effort * fl_actual) + std::abs(fr_effort * fr_actual) + std::abs(bl_effort * bl_actual) +
+             std::abs(br_effort * br_actual);
+  double c = vel_coeff * (square(fl_actual) + square(fr_actual) + square(bl_actual) + square(br_actual)) - power_limit;
+  double zoom_coeff = (square(b) - 4 * a * c) > 0 ? ((-b + sqrt(square(b) - 4 * a * c)) / (2 * a)) : 0.;
+  if (zoom_coeff > 1) {}
+  else
   {
-    double k =
-        ((-P_out) +
-         sqrt(pow(fl_effort * fl_actual, 2) + pow(fr_effort * fr_actual, 2) + pow(bl_effort * bl_actual, 2) +
-              pow(br_effort * br_actual, 2) -
-              4 * effort_coeff * (pow(fl_effort, 2) + pow(fr_effort, 2) + pow(bl_effort, 2) + pow(br_effort, 2)) *
-                  (vel_coeff * (pow(fl_actual, 2) + pow(fr_actual, 2) + pow(bl_actual, 2) + pow(br_actual, 2)) -
-                   power_limit))) /
-        2 * effort_coeff * (pow(fl_effort, 2) + pow(fr_effort, 2) + pow(bl_effort, 2) + pow(br_effort, 2));
-    fl_effort = fl_effort * k;
-    fr_effort = fr_effort * k;
-    bl_effort = bl_effort * k;
-    br_effort = br_effort * k;
+    fl_effort = fl_effort * zoom_coeff;
+    fr_effort = fr_effort * zoom_coeff;
+    bl_effort = bl_effort * zoom_coeff;
+    br_effort = br_effort * zoom_coeff;
   }
 
   // Output

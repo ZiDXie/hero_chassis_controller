@@ -111,6 +111,7 @@ private:
   double power_limit;
   double effort_coeff;
   double vel_coeff;
+  double square(double x);
 };
 
 }  // namespace hero_chassis_controller
