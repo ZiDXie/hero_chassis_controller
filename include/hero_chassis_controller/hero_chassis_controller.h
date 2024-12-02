@@ -21,7 +21,7 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_listener.h"
-#include "rm_msgs/ChassisCmd.h"
+#include "rm_common/filters/filters.h"
 
 #include "realtime_tools/realtime_publisher.h"
 
@@ -79,6 +79,8 @@ private:
   // Target speed and parameters of the car
   // The parameters of the car are in the URDF
   double vx, vy, wz = 0.0;
+  RampFilter<double>*ramp_x{}, *ramp_y{}, *ramp_wz{};
+  double accel_x, accel_y, accel_wz;
   double wheel_base;
   double wheel_track;
   double wheel_radius = 0.07625;
@@ -112,6 +114,9 @@ private:
   double effort_coeff;
   double vel_coeff;
   double square(double x);
+
+  ros::Time last_time;
+  double timeout = 0.1;
 };
 
 }  // namespace hero_chassis_controller
