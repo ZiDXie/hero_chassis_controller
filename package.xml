@@ -30,6 +30,7 @@
     <depend>tf2</depend>
     <depend>tf</depend>
     <depend>rm_msgs</depend>
+    <depend>rm_common</depend>
     <build_depend>roslint</build_depend>
     <export>
         <controller_interface plugin="${prefix}/hero_chassis_controller_plugins.xml"/>

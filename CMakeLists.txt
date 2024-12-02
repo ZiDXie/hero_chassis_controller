@@ -34,6 +34,7 @@ find_package(catkin REQUIRED
         tf2
         tf
         rm_msgs
+        rm_common
 )
 
 ## Find system libraries
@@ -77,6 +78,7 @@ catkin_package(
         tf2
         tf
         rm_msgs
+        rm_common
         DEPENDS
         ## find_package(Eigen3) provides a non standard EIGEN3_INCLUDE_DIR instead of Eigen3_INCLUDE_DIRS.
         ## Therefore, the DEPEND does not work as expected and we need to add the directory to the INCLUDE_DIRS
