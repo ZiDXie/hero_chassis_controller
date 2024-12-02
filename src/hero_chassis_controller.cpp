@@ -16,23 +16,20 @@ double HeroChassisController::square(double x)
 // Callback function implementation
 void HeroChassisController::cb(hero_chassis_controller::pidConfig& config, uint32_t level)
 {
-  pid_front_left_.setGains(config.left_front_p, config.left_front_i, config.left_front_d, 1, -1);
-  pid_front_right_.setGains(config.right_front_p, config.right_front_i, config.right_front_d, 1, -1);
-  pid_back_left_.setGains(config.left_back_p, config.left_back_i, config.left_back_d, 1, -1);
-  pid_back_right_.setGains(config.right_back_p, config.right_back_i, config.right_back_d, 1, -1);
-
-  chassis_mode = config.chassis_mode;
-
+  pid_front_left_.setGains(config.left_front_p, config.left_front_i, config.left_front_d, 0, 0);
+  pid_front_right_.setGains(config.right_front_p, config.right_front_i, config.right_front_d, 0, 0);
+  pid_back_left_.setGains(config.left_back_p, config.left_back_i, config.left_back_d, 0, 0);
+  pid_back_right_.setGains(config.right_back_p, config.right_back_i, config.right_back_d, 0, 0);
   ROS_INFO("Update PID gains:");
   ROS_INFO("Front Left: P=%.2f, I=%.2f, D=%.2f", config.left_front_p, config.left_front_i, config.left_front_d);
   ROS_INFO("Front Right: P=%.2f, I=%.2f, D=%.2f", config.right_front_p, config.right_front_i, config.right_front_d);
   ROS_INFO("Back Left: P=%.2f, I=%.2f, D=%.2f", config.left_back_p, config.left_back_i, config.left_back_d);
   ROS_INFO("Back Right: P=%.2f, I=%.2f, D=%.2f", config.right_back_p, config.right_back_i, config.right_back_d);
-  ROS_INFO("chassis_mode=%d", config.chassis_mode);
 }
 
 void HeroChassisController::cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg)
 {
+  last_time = ros::Time::now();
   if (!chassis_mode)
   {
     // Global information settings
@@ -50,8 +47,12 @@ void HeroChassisController::cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg)
   }
   else
   {
-    vx = msg->linear.x;
-    vy = msg->linear.y;
+    ramp_x->setAcc(accel_x);
+    ramp_y->setAcc(accel_y);
+    ramp_x->input(msg->linear.x);
+    ramp_y->input(msg->linear.y);
+    vx = ramp_x->output();
+    vy = ramp_y->output();
     wz = msg->angular.z;
   }
 }
@@ -67,18 +68,30 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
   back_right_joint_ = effort_joint_interface->getHandle("right_back_wheel_joint");
 
   // pid initialization
-  pid_front_left_.initPid(0, 0.0, 0.0, 1, -1);
-  pid_front_right_.initPid(0, 0.0, 0.0, 1, -1);
-  pid_back_left_.initPid(0, 0.0, 0.0, 1, -1);
-  pid_back_right_.initPid(0, 0.0, 0.0, 1, -1);
+  pid_front_left_.initPid(0, 0.0, 0.0, 0, -0);
+  pid_front_right_.initPid(0, 0.0, 0.0, 0, 0);
+  pid_back_left_.initPid(0, 0.0, 0.0, 0, 0);
+  pid_back_right_.initPid(0, 0.0, 0.0, 0, 0);
 
   // Read parameters from configuration file
-  controller_nh.param("chassis_mode", chassis_mode, true);
-  controller_nh.param("wheel_base", wheel_base, 0.4);
-  controller_nh.param("wheel_track", wheel_track, 0.4);
-  controller_nh.param("power/power_limit", power_limit, 10.0);
-  controller_nh.param("power/effort_coeff", effort_coeff, 10.0);
-  controller_nh.param("power/vel_coeff", vel_coeff, 0.0060);
+  if (!controller_nh.getParam("/controller/chassis_mode", chassis_mode) ||
+      !controller_nh.getParam("/controller/wheel_base", wheel_base) ||
+      !controller_nh.getParam("/controller/wheel_track", wheel_track) ||
+      !controller_nh.getParam("/controller/power_limit", power_limit) ||
+      !controller_nh.getParam("/controller/power/effort_coeff", effort_coeff) ||
+      !controller_nh.getParam("/controller/power/vel_coeff", vel_coeff) ||
+      !controller_nh.getParam("/controller/accel/linear/x", accel_x) ||
+      !controller_nh.getParam("/controller/accel/linear/y", accel_y) ||
+      !controller_nh.getParam("/controller/accel/angular/z", accel_wz))
+  {
+    ROS_ERROR("Failed to get param");
+    return false;
+  }
+
+  // ramp init
+  ramp_x = new RampFilter<double>(0, 0.001);
+  ramp_y = new RampFilter<double>(0, 0.001);
+  ramp_wz = new RampFilter<double>(0, 0.001);
 
   // Dynamic parameters
   server = std::make_shared<dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>>(controller_nh);
@@ -97,6 +110,15 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
 // Status update function implementation
 void HeroChassisController::update(const ros::Time& time, const ros::Duration& period)
 {
+  if ((time - last_time).toSec() > timeout)
+  {
+    vx = 0;
+    vy = 0;
+    wz = 0;
+    ramp_x->clear(vx);
+    ramp_y->clear(vy);
+  }
+
   // 期望速度,根据论文中的公式计算
   double lx = wheel_base / 2;
   double ly = wheel_track / 2;

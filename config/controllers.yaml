@@ -1,11 +1,14 @@
 controller:
   wheel_base: 0.4  # 轴距
   wheel_track: 0.4  # 轮距
-  chassis_mode: true
+  chassis_mode: true # 是否启用底盘模式
+  power_limit: 80.0
+  accel:
+    linear: { x: 3.0, y: 3.0, z: 0.0 }
+    angular: { x: 0.0, y: 0.0, z: 3.0 }
   power:
     effort_coeff: 10.0
     vel_coeff: 0.0060
-    power_limit: 80.0
   hero_chassis_controller:
     type: hero_chassis_controller/HeroChassisController
   joint_state_controller:
