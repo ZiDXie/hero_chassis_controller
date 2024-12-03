@@ -9,6 +9,7 @@ controller:
   power:
     effort_coeff: 10.0
     vel_coeff: 0.0060
+    power_offset: -8.41
   hero_chassis_controller:
     type: hero_chassis_controller/HeroChassisController
   joint_state_controller:

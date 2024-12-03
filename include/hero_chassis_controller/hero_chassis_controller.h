@@ -22,7 +22,7 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_listener.h"
 #include "rm_common/filters/filters.h"
-
+#include "std_msgs/Float64.h"
 #include "realtime_tools/realtime_publisher.h"
 
 namespace hero_chassis_controller
@@ -113,7 +113,10 @@ private:
   double power_limit;
   double effort_coeff;
   double vel_coeff;
+  double power_offset;
   double square(double x);
+  ros::Publisher power_limit_pub;
+  ros::Publisher power_pub;
 
   ros::Time last_time;
   double timeout = 0.1;

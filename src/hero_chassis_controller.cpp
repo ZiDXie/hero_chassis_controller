@@ -80,6 +80,7 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
       !controller_nh.getParam("/controller/power_limit", power_limit) ||
       !controller_nh.getParam("/controller/power/effort_coeff", effort_coeff) ||
       !controller_nh.getParam("/controller/power/vel_coeff", vel_coeff) ||
+      !controller_nh.getParam("/controller/power/power_offset", power_offset) ||
       !controller_nh.getParam("/controller/accel/linear/x", accel_x) ||
       !controller_nh.getParam("/controller/accel/linear/y", accel_y) ||
       !controller_nh.getParam("/controller/accel/angular/z", accel_wz))
@@ -101,9 +102,10 @@ bool HeroChassisController::init(hardware_interface::EffortJointInterface* effor
   // cmd_sub subscription speed
   cmd_sub = root_nh.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &HeroChassisController::cmdvel_cb, this);
 
-  // Publish odom
+  // Publish
   odom_pub = root_nh.advertise<nav_msgs::Odometry>("odom", 10);
-
+  power_limit_pub = root_nh.advertise<std_msgs::Float64>("power_limit", 10);
+  power_pub = root_nh.advertise<std_msgs::Float64>("power", 10);
   return true;
 }
 
@@ -119,7 +121,7 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
     ramp_y->clear(vy);
   }
 
-  // 期望速度,根据论文中的公式计算
+  // Expect speed
   double lx = wheel_base / 2;
   double ly = wheel_track / 2;
   double fl_exp = (vx - vy - (lx + ly) * wz) / wheel_radius;
@@ -133,7 +135,7 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   double bl_actual = back_left_joint_.getVelocity();
   double br_actual = back_right_joint_.getVelocity();
 
-  // calculate
+  // Calculate
   double fl_effort = pid_front_left_.computeCommand(fl_exp - fl_actual, period);
   double fr_effort = pid_front_right_.computeCommand(fr_exp - fr_actual, period);
   double bl_effort = pid_back_left_.computeCommand(bl_exp - bl_actual, period);
@@ -143,7 +145,8 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   double a = effort_coeff * (square(fl_effort) + square(fr_effort) + square(bl_effort) + square(br_effort));
   double b = std::abs(fl_effort * fl_actual) + std::abs(fr_effort * fr_actual) + std::abs(bl_effort * bl_actual) +
              std::abs(br_effort * br_actual);
-  double c = vel_coeff * (square(fl_actual) + square(fr_actual) + square(bl_actual) + square(br_actual)) - power_limit;
+  double c = vel_coeff * (square(fl_actual) + square(fr_actual) + square(bl_actual) + square(br_actual)) - power_limit -
+             power_offset;
   double zoom_coeff = (square(b) - 4 * a * c) > 0 ? ((-b + sqrt(square(b) - 4 * a * c)) / (2 * a)) : 0.;
   if (zoom_coeff > 1) {}
   else
@@ -153,6 +156,15 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
     bl_effort = bl_effort * zoom_coeff;
     br_effort = br_effort * zoom_coeff;
   }
+  std_msgs::Float64 power_limit_msg;
+  power_limit_msg.data = power_limit;
+  power_limit_pub.publish(power_limit_msg);
+  std_msgs::Float64 power_msg;
+  power_msg.data = std::abs(fl_effort * fl_actual) + std::abs(fr_effort * fr_actual) + std::abs(bl_effort * bl_actual) +
+                   std::abs(br_effort * br_actual) +
+                   effort_coeff * (square(fl_effort) + square(fr_effort) + square(bl_effort) + square(br_effort)) +
+                   vel_coeff * (square(fl_actual) + square(fr_actual) + square(bl_actual) + square(br_actual));
+  power_pub.publish(power_msg);
 
   // Output
   front_left_joint_.setCommand(fl_effort);
@@ -160,16 +172,13 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   back_left_joint_.setCommand(bl_effort);
   back_right_joint_.setCommand(br_effort);
 
-  // odom
-  double dt = period.toSec();
-
-  // 计算实际速度,根据论文中的公式计算
   // The real_speed is the base_link speed
   vx_real = (fl_actual + fr_actual + bl_actual + br_actual) * wheel_radius / 4;
   vy_real = (-fl_actual + fr_actual + bl_actual - br_actual) * wheel_radius / 4;
   vth_real = (-fl_actual + fr_actual - bl_actual + br_actual) * wheel_radius / (4 * (lx + ly));
 
   // Calculate odometer and convert to odom
+  double dt = period.toSec();
   double dx = (vx_real * cos(th) - vy_real * sin(th)) * dt;
   double dy = (vx_real * sin(th) + vy_real * cos(th)) * dt;
   double dth = vth_real * dt;
@@ -216,6 +225,4 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
 }
 
 PLUGINLIB_EXPORT_CLASS(hero_chassis_controller::HeroChassisController, controller_interface::ControllerBase)
-}
-
-
+}  // namespace hero_chassis_controller
