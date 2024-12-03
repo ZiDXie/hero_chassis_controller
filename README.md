@@ -42,6 +42,8 @@ The PACKAGE NAME package has been tested under [ROS] Indigo, Melodic and Noetic 
 - tf2_geometry_msgs
 - tf2
 - tf
+- rm_msgs
+- rm_common
 
 #### Building
 
@@ -92,6 +94,10 @@ Control the hero chassis.
 * **`wheel_base`** (double, default: 0.4)
 * **`wheel_track`**(double, default: 0.4)
 * **`chassis_mode`**(bool, default: true)
+* **`power_limit`**(double, default: 80.0)
+* **`effort_coeff`**(double, default: 10.0)
+* **`vel_coeff`**(double, default: 0.0060)
+* **`power_offset`**(double, default: -8.41)
 * **`p`** (double, default: 1.0)
 * **`i`** (double, default: 0.0)
 * **`d`** (double, default: 0.0)
