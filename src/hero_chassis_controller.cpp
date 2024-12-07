@@ -26,8 +26,7 @@ void HeroChassisController::cb(hero_chassis_controller::pidConfig& config, uint3
   ROS_INFO("Back Left: P=%.2f, I=%.2f, D=%.2f", config.left_back_p, config.left_back_i, config.left_back_d);
   ROS_INFO("Back Right: P=%.2f, I=%.2f, D=%.2f", config.right_back_p, config.right_back_i, config.right_back_d);
 }
-
-void HeroChassisController::cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg)
+void HeroChassisController::cmd_vel_cb(const geometry_msgs::Twist::ConstPtr& msg)
 {
   last_time = ros::Time::now();
   if (!chassis_mode)
@@ -47,83 +46,16 @@ void HeroChassisController::cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg)
   }
   else
   {
-    ramp_x->setAcc(accel_x);
-    ramp_y->setAcc(accel_y);
-    ramp_x->input(msg->linear.x);
-    ramp_y->input(msg->linear.y);
-    vx = ramp_x->output();
-    vy = ramp_y->output();
+    vx = msg->linear.x;
+    vy = msg->linear.y;
     wz = msg->angular.z;
   }
 }
 
-// Initialization function implementation
-bool HeroChassisController::init(hardware_interface::EffortJointInterface* effort_joint_interface,
-                                 ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh)
+// Move joint function implementation
+void HeroChassisController::move_joint(const ros::Time& time, const ros::Duration& period)
 {
-  // Joint initialization
-  front_left_joint_ = effort_joint_interface->getHandle("left_front_wheel_joint");
-  front_right_joint_ = effort_joint_interface->getHandle("right_front_wheel_joint");
-  back_left_joint_ = effort_joint_interface->getHandle("left_back_wheel_joint");
-  back_right_joint_ = effort_joint_interface->getHandle("right_back_wheel_joint");
-
-  // pid initialization
-  pid_front_left_.initPid(0, 0.0, 0.0, 0, -0);
-  pid_front_right_.initPid(0, 0.0, 0.0, 0, 0);
-  pid_back_left_.initPid(0, 0.0, 0.0, 0, 0);
-  pid_back_right_.initPid(0, 0.0, 0.0, 0, 0);
-
-  // Read parameters from configuration file
-  if (!controller_nh.getParam("/controller/chassis_mode", chassis_mode) ||
-      !controller_nh.getParam("/controller/wheel_base", wheel_base) ||
-      !controller_nh.getParam("/controller/wheel_track", wheel_track) ||
-      !controller_nh.getParam("/controller/power_limit", power_limit) ||
-      !controller_nh.getParam("/controller/power/effort_coeff", effort_coeff) ||
-      !controller_nh.getParam("/controller/power/vel_coeff", vel_coeff) ||
-      !controller_nh.getParam("/controller/power/power_offset", power_offset) ||
-      !controller_nh.getParam("/controller/accel/linear/x", accel_x) ||
-      !controller_nh.getParam("/controller/accel/linear/y", accel_y) ||
-      !controller_nh.getParam("/controller/accel/angular/z", accel_wz))
-  {
-    ROS_ERROR("Failed to get param");
-    return false;
-  }
-
-  // ramp init
-  ramp_x = new RampFilter<double>(0, 0.001);
-  ramp_y = new RampFilter<double>(0, 0.001);
-  ramp_wz = new RampFilter<double>(0, 0.001);
-
-  // Dynamic parameters
-  server = std::make_shared<dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>>(controller_nh);
-  server->setCallback(
-      [this](auto&& PH1, auto&& PH2) { cb(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
-
-  // cmd_sub subscription speed
-  cmd_sub = root_nh.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &HeroChassisController::cmdvel_cb, this);
-
-  // Publish
-  odom_pub = root_nh.advertise<nav_msgs::Odometry>("odom", 10);
-  power_limit_pub = root_nh.advertise<std_msgs::Float64>("power_limit", 10);
-  power_pub = root_nh.advertise<std_msgs::Float64>("power", 10);
-  return true;
-}
-
-// Status update function implementation
-void HeroChassisController::update(const ros::Time& time, const ros::Duration& period)
-{
-  if ((time - last_time).toSec() > timeout)
-  {
-    vx = 0;
-    vy = 0;
-    wz = 0;
-    ramp_x->clear(vx);
-    ramp_y->clear(vy);
-  }
-
   // Expect speed
-  double lx = wheel_base / 2;
-  double ly = wheel_track / 2;
   double fl_exp = (vx - vy - (lx + ly) * wz) / wheel_radius;
   double fr_exp = (vx + vy + (lx + ly) * wz) / wheel_radius;
   double bl_exp = (vx + vy - (lx + ly) * wz) / wheel_radius;
@@ -156,27 +88,27 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
     bl_effort = bl_effort * zoom_coeff;
     br_effort = br_effort * zoom_coeff;
   }
-  std_msgs::Float64 power_limit_msg;
-  power_limit_msg.data = power_limit;
-  power_limit_pub.publish(power_limit_msg);
-  std_msgs::Float64 power_msg;
-  power_msg.data = std::abs(fl_effort * fl_actual) + std::abs(fr_effort * fr_actual) + std::abs(bl_effort * bl_actual) +
-                   std::abs(br_effort * br_actual) +
-                   effort_coeff * (square(fl_effort) + square(fr_effort) + square(bl_effort) + square(br_effort)) +
-                   vel_coeff * (square(fl_actual) + square(fr_actual) + square(bl_actual) + square(br_actual));
-  power_pub.publish(power_msg);
 
   // Output
   front_left_joint_.setCommand(fl_effort);
   front_right_joint_.setCommand(fr_effort);
   back_left_joint_.setCommand(bl_effort);
   back_right_joint_.setCommand(br_effort);
+}
+
+// Update odom function implementation
+void HeroChassisController::update_odom(const ros::Time& time, const ros::Duration& period)
+{
+  // Actual vel
+  double fl_actual = front_left_joint_.getVelocity();
+  double fr_actual = front_right_joint_.getVelocity();
+  double bl_actual = back_left_joint_.getVelocity();
+  double br_actual = back_right_joint_.getVelocity();
 
   // The real_speed is the base_link speed
   vx_real = (fl_actual + fr_actual + bl_actual + br_actual) * wheel_radius / 4;
   vy_real = (-fl_actual + fr_actual + bl_actual - br_actual) * wheel_radius / 4;
   vth_real = (-fl_actual + fr_actual - bl_actual + br_actual) * wheel_radius / (4 * (lx + ly));
-
   // Calculate odometer and convert to odom
   double dt = period.toSec();
   double dx = (vx_real * cos(th) - vy_real * sin(th)) * dt;
@@ -222,6 +154,100 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
   odom.twist.twist.angular.z = vth_real;
 
   odom_pub.publish(odom);
+}
+
+// power pub
+void HeroChassisController::power_msg_pub()
+{
+  // Actual vel
+  double fl_actual = front_left_joint_.getVelocity();
+  double fr_actual = front_right_joint_.getVelocity();
+  double bl_actual = back_left_joint_.getVelocity();
+  double br_actual = back_right_joint_.getVelocity();
+
+  // Calculate
+  double fl_effort = front_left_joint_.getCommand();
+  double fr_effort = front_right_joint_.getCommand();
+  double bl_effort = back_left_joint_.getCommand();
+  double br_effort = back_right_joint_.getCommand();
+
+  std_msgs::Float64 power_limit_msg;
+  power_limit_msg.data = power_limit;
+  power_limit_pub.publish(power_limit_msg);
+  std_msgs::Float64 power_msg;
+  power_msg.data = std::abs(fl_effort * fl_actual) + std::abs(fr_effort * fr_actual) + std::abs(bl_effort * bl_actual) +
+                   std::abs(br_effort * br_actual) +
+                   effort_coeff * (square(fl_effort) + square(fr_effort) + square(bl_effort) + square(br_effort)) +
+                   vel_coeff * (square(fl_actual) + square(fr_actual) + square(bl_actual) + square(br_actual));
+  power_pub.publish(power_msg);
+}
+
+// Initialization function implementation
+bool HeroChassisController::init(hardware_interface::EffortJointInterface* effort_joint_interface,
+                                 ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh)
+{
+  // Joint initialization
+  front_left_joint_ = effort_joint_interface->getHandle("left_front_wheel_joint");
+  front_right_joint_ = effort_joint_interface->getHandle("right_front_wheel_joint");
+  back_left_joint_ = effort_joint_interface->getHandle("left_back_wheel_joint");
+  back_right_joint_ = effort_joint_interface->getHandle("right_back_wheel_joint");
+
+  // pid initialization
+  pid_front_left_.initPid(0, 0.0, 0.0, 0, -0);
+  pid_front_right_.initPid(0, 0.0, 0.0, 0, 0);
+  pid_back_left_.initPid(0, 0.0, 0.0, 0, 0);
+  pid_back_right_.initPid(0, 0.0, 0.0, 0, 0);
+
+  // Read parameters from configuration file
+  if (!controller_nh.getParam("/controller/chassis_mode", chassis_mode) ||
+      !controller_nh.getParam("/controller/wheel_base", wheel_base) ||
+      !controller_nh.getParam("/controller/wheel_track", wheel_track) ||
+      !controller_nh.getParam("/controller/power_limit", power_limit) ||
+      !controller_nh.getParam("/controller/power/effort_coeff", effort_coeff) ||
+      !controller_nh.getParam("/controller/power/vel_coeff", vel_coeff) ||
+      !controller_nh.getParam("/controller/power/power_offset", power_offset) ||
+      !controller_nh.getParam("/controller/accel/linear/x", accel_x) ||
+      !controller_nh.getParam("/controller/accel/linear/y", accel_y) ||
+      !controller_nh.getParam("/controller/accel/angular/z", accel_wz))
+  {
+    ROS_ERROR("Failed to get param");
+    return false;
+  }
+
+  // Dynamic parameters
+  server = std::make_shared<dynamic_reconfigure::Server<hero_chassis_controller::pidConfig>>(controller_nh);
+  server->setCallback(
+      [this](auto&& PH1, auto&& PH2) { cb(std::forward<decltype(PH1)>(PH1), std::forward<decltype(PH2)>(PH2)); });
+
+  // cmd_sub subscription speed
+  cmd_sub = root_nh.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &HeroChassisController::cmd_vel_cb, this);
+
+  // Publish
+  odom_pub = root_nh.advertise<nav_msgs::Odometry>("odom", 10);
+  power_limit_pub = root_nh.advertise<std_msgs::Float64>("power_limit", 10);
+  power_pub = root_nh.advertise<std_msgs::Float64>("power", 10);
+
+  lx = wheel_base / 2;
+  ly = wheel_track / 2;
+
+  return true;
+}
+
+// Status update function implementation
+void HeroChassisController::update(const ros::Time& time, const ros::Duration& period)
+{
+  if ((time - last_time).toSec() > timeout)
+  {
+    vx = 0;
+    vy = 0;
+    wz = 0;
+  }
+
+  move_joint(time, period);
+
+  update_odom(time, period);
+
+  power_msg_pub();
 }
 
 PLUGINLIB_EXPORT_CLASS(hero_chassis_controller::HeroChassisController, controller_interface::ControllerBase)

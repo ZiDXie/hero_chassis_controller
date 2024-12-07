@@ -58,7 +58,7 @@ private:
   /*!
    * ROS topic callback method.
    */
-  void cmdvel_cb(const geometry_msgs::Twist::ConstPtr& msg);
+  void cmd_vel_cb(const geometry_msgs::Twist::ConstPtr& msg);
 
   /*!
    * ROS service server callback.
@@ -79,21 +79,21 @@ private:
   // Target speed and parameters of the car
   // The parameters of the car are in the URDF
   double vx, vy, wz = 0.0;
-  RampFilter<double>*ramp_x{}, *ramp_y{}, *ramp_wz{};
   double accel_x, accel_y, accel_wz;
   double wheel_base;
   double wheel_track;
   double wheel_radius = 0.07625;
+  double lx, ly;
+  void move_joint(const ros::Time& time, const ros::Duration& period);
 
   // Publish the odom
   ros::Publisher odom_pub;
   tf2_ros::TransformBroadcaster odom_broadcaster;
-
+  void update_odom(const ros::Time& time, const ros::Duration& period);
   // The robot initially starts from the origin of the "odom" coordinate system.
   double x = 0.0;
   double y = 0.0;
   double th = 0.0;
-
   // Actual speed
   double vx_real = 0.0;
   double vy_real = 0.0;
@@ -102,10 +102,8 @@ private:
   // Mode Switching
   bool chassis_mode;
   tf::TransformListener tf_listener;
-
   // Source coordinate system
   geometry_msgs::Vector3Stamped global;
-
   // Target coordinate system
   geometry_msgs::Vector3Stamped chassis;
 
@@ -117,6 +115,7 @@ private:
   double square(double x);
   ros::Publisher power_limit_pub;
   ros::Publisher power_pub;
+  void power_msg_pub();
 
   ros::Time last_time;
   double timeout = 0.1;
