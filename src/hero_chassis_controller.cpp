@@ -28,7 +28,12 @@ void HeroChassisController::cb(hero_chassis_controller::pidConfig& config, uint3
 }
 void HeroChassisController::cmd_vel_cb(const geometry_msgs::Twist::ConstPtr& msg)
 {
-  last_time = ros::Time::now();
+  ros::Time current_time = ros::Time::now();
+  double delta_t = (current_time - last_time).toSec();
+  last_time = current_time;
+  double target_vx = 0;
+  double target_vy = 0;
+  double target_wz = 0;
   if (!chassis_mode)
   {
     // Global information settings
@@ -40,16 +45,21 @@ void HeroChassisController::cmd_vel_cb(const geometry_msgs::Twist::ConstPtr& msg
 
     // Convert to chassis coordinate system
     tf_listener.transformVector("base_link", global, chassis);
-    vx = chassis.vector.x;
-    vy = chassis.vector.y;
-    wz = msg->angular.z;
+    target_vx = chassis.vector.x;
+    target_vy = chassis.vector.y;
+    target_wz = msg->angular.z;
   }
   else
   {
-    vx = msg->linear.x;
-    vy = msg->linear.y;
-    wz = msg->angular.z;
+    target_vx = msg->linear.x;
+    target_vy = msg->linear.y;
+    target_wz = msg->angular.z;
   }
+
+  // Calculate the acceleration
+  vx = accel_set(target_vx, vx, accel_x, delta_t);
+  vy = accel_set(target_vy, vy, accel_y, delta_t);
+  wz = accel_set(target_wz, wz, accel_wz, delta_t);
 }
 
 // Move joint function implementation
@@ -94,6 +104,18 @@ void HeroChassisController::move_joint(const ros::Time& time, const ros::Duratio
   front_right_joint_.setCommand(fr_effort);
   back_left_joint_.setCommand(bl_effort);
   back_right_joint_.setCommand(br_effort);
+}
+
+// Accle set function implementation
+double HeroChassisController::accel_set(double target_speed, double current_speed, double accel, double delta_t)
+{
+  double delta_v = accel * delta_t;
+
+  if (target_speed > current_speed)
+  {
+    return std::min(current_speed + delta_v, target_speed);
+  }
+  return std::max(current_speed - delta_v, target_speed);
 }
 
 // Update odom function implementation
@@ -165,7 +187,7 @@ void HeroChassisController::power_msg_pub()
   double bl_actual = back_left_joint_.getVelocity();
   double br_actual = back_right_joint_.getVelocity();
 
-  // Calculate
+  // Effort
   double fl_effort = front_left_joint_.getCommand();
   double fr_effort = front_right_joint_.getCommand();
   double bl_effort = back_left_joint_.getCommand();

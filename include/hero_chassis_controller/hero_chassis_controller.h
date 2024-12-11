@@ -85,6 +85,7 @@ private:
   double wheel_radius = 0.07625;
   double lx, ly;
   void move_joint(const ros::Time& time, const ros::Duration& period);
+  double accel_set(double target_speed, double current_speed, double accle, double delta_t);
 
   // Publish the odom
   ros::Publisher odom_pub;
