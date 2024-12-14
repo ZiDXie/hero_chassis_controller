@@ -85,6 +85,14 @@ Control the hero chassis.
 
 #### Published Topics
 
+* **`/power_limit_pub`** ([[std_msgs::Float64](http://docs.ros.org/en/noetic/api/nav_msgs/html/msg/Odometry.html)])
+
+  Publish power limit.
+  
+* **`/power_pub`** ([[std_msgs::Float64](http://docs.ros.org/en/noetic/api/nav_msgs/html/msg/Odometry.html)])
+
+  Publish power.
+  
 * **`/odom`** ([[nav_msgs/Odometry](http://docs.ros.org/en/noetic/api/nav_msgs/html/msg/Odometry.html)])
 
   Publish the tf change.
@@ -98,6 +106,7 @@ Control the hero chassis.
 * **`effort_coeff`**(double, default: 10.0)
 * **`vel_coeff`**(double, default: 0.0060)
 * **`power_offset`**(double, default: -8.41)
+* **`accel`**
 * **`p`** (double, default: 1.0)
 * **`i`** (double, default: 0.0)
 * **`d`** (double, default: 0.0)
