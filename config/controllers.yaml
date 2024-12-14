@@ -1,7 +1,7 @@
 controller:
   wheel_base: 0.4
   wheel_track: 0.4
-  chassis_mode: false
+  chassis_mode: true
   power_limit: 80.0
   accel:
     linear: { x: 3.0, y: 3.0, z: 0.0 }
